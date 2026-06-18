@@ -32,7 +32,9 @@ if FastAPI is not None:
 
     @app.get("/")
     def index() -> "HTMLResponse":
-        return HTMLResponse(INDEX.read_text())
+        # read as UTF-8 explicitly — the file has em-dashes etc., and Windows
+        # would otherwise decode it as cp1252 and corrupt them.
+        return HTMLResponse(INDEX.read_text(encoding="utf-8"))
 
     @app.get("/events")
     async def events() -> "StreamingResponse":
@@ -40,7 +42,7 @@ if FastAPI is not None:
             pos = 0
             while True:
                 if SESSION.exists():
-                    text = SESSION.read_text()
+                    text = SESSION.read_text(encoding="utf-8")
                     if len(text) > pos:
                         for line in text[pos:].splitlines():
                             if line.strip():
@@ -52,7 +54,7 @@ if FastAPI is not None:
 
 def replay(path: str = "session.jsonl"):
     """CLI replay: print each event with its relative timestamp (forensic view)."""
-    events = [json.loads(l) for l in Path(path).read_text().splitlines() if l.strip()]
+    events = [json.loads(l) for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]
     t0 = events[0]["ts"] if events else 0
     for e in events:
         print(f"+{e['ts'] - t0:6.2f}s  {e['kind']:10s}  {json.dumps(e['data'])[:100]}")
