@@ -34,13 +34,24 @@ def load_receipts(path: str | Path) -> List[Receipt]:
 
 
 def verify_session(path: str | Path) -> Tuple[bool, int]:
-    """Return ``(intact, n_receipts)`` for the receipt chain in ``path``."""
+    """Return ``(intact, n_receipts)`` for the receipt chain(s) in ``path``.
+
+    A session log may concatenate several independent runs, each a fresh chain
+    rooted at GENESIS. We verify every receipt's own hash and that links are
+    contiguous *within* a segment; a receipt whose ``prev_hash`` is GENESIS
+    legitimately starts a new segment (a new session), not a break.
+    """
     receipts = load_receipts(path)
     prev = GENESIS
     for r in receipts:
         recomputed = Receipt(**{**asdict(r), "this_hash": ""}).finalize().this_hash
-        if r.prev_hash != prev or r.this_hash != recomputed:
-            return False, len(receipts)
+        if r.this_hash != recomputed:
+            return False, len(receipts)            # this receipt was altered
+        if r.prev_hash == GENESIS:
+            prev = r.this_hash                      # start of a fresh session chain
+            continue
+        if r.prev_hash != prev:
+            return False, len(receipts)             # a receipt was dropped/reordered
         prev = r.this_hash
     return True, len(receipts)
 

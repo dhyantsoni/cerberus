@@ -43,6 +43,19 @@ def test_cli_verify_reads_session_log(tmp_path):
     assert intact and n == 2
 
 
+def test_cli_verify_accepts_concatenated_sessions(tmp_path):
+    """Two independent runs appended to one log are each a valid GENESIS-rooted
+    chain; the auditor must not flag the segment boundary as tampering."""
+    path = tmp_path / "session.jsonl"
+    EventBus(path)  # ensure parent exists
+    for _ in range(2):  # two separate sessions writing to the same file
+        bus = EventBus(path)
+        _issue(bus, "ALLOW")
+        _issue(bus, "BLOCK")
+    intact, n = verify_session(path)
+    assert intact and n == 4
+
+
 def test_cli_verify_detects_tampered_log(tmp_path):
     path = tmp_path / "session.jsonl"
     bus = EventBus(path)
