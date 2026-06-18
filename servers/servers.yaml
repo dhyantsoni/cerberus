@@ -1,0 +1,33 @@
+# External MCP servers to place BEHIND Cerberus.
+#
+# Each entry is spawned as a stdio subprocess and mediated by the
+# Sentinel -> Tracer -> Warden pipeline. Point cerberus.mcp_server at this file:
+#
+#     CERBERUS_SERVERS=servers/servers.yaml python -m cerberus.mcp_server
+#
+# Labelling per server is what keeps Cerberus framework-agnostic:
+#   trusted:     false => the server's output arms L2 (untrusted influence)
+#   is_egress:   true  => calling it arms L3 (external egress)
+#   sensitivity: PUBLIC | PRIVATE | SECRET  (how its results are labelled)
+#   readers:     reader-ACL; omit for ["*"] (any sink). A SECRET source with no
+#                readers cannot flow to any external sink (fail-closed).
+#
+# The demo runs fully in-process WITHOUT this file; these are real-world examples.
+
+servers: []
+
+# Examples (uncomment + adjust paths to proxy real servers):
+#
+#   - name: filesystem
+#     command: npx
+#     args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+#     trusted: true
+#     is_egress: false
+#     sensitivity: PRIVATE
+#
+#   - name: fetch                  # web content -> untrusted AND egress-capable
+#     command: uvx
+#     args: ["mcp-server-fetch"]
+#     trusted: false               # arms L2 (untrusted influence)
+#     is_egress: true              # arms L3 (external egress)
+#     sensitivity: PUBLIC

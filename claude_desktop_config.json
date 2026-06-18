@@ -1,0 +1,13 @@
+{
+  "_comment": "Drop this into your MCP client config to mediate ALL tool calls through Cerberus. Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%/Claude/claude_desktop_config.json (Windows). Cursor: .cursor/mcp.json. Replace cwd with the absolute path to this repo; use 'python3' on macOS/Linux. To proxy REAL external MCP servers behind Cerberus, set CERBERUS_SERVERS to servers/servers.yaml (otherwise the in-process demo servers are used).",
+  "mcpServers": {
+    "cerberus": {
+      "command": "python",
+      "args": ["-m", "cerberus.mcp_server"],
+      "cwd": "/absolute/path/to/cerberus",
+      "env": {
+        "PYTHONUTF8": "1"
+      }
+    }
+  }
+}
