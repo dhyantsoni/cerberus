@@ -1,0 +1,23 @@
+title: Honeytoken Canary in Outbound Payload
+id: cerb-0002
+status: stable
+description: A seeded canary from a SECRET source appeared in an outbound payload — catches secret laundering that bypassed label tracking (the in-head-laundering case).
+author: Cerberus
+date: 2026/06/18
+references:
+  - https://arxiv.org/abs/2505.23643
+tags:
+  - attack.exfiltration
+  - attack.t1041
+  - owasp.asi02
+logsource:
+  product: cerberus
+  service: gateway
+detection:
+  selection:
+    kind: trifecta
+    honeytoken: true
+  condition: selection
+falsepositives:
+  - None expected; a canary never legitimately leaves the trust boundary.
+level: critical

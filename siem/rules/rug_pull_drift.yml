@@ -1,0 +1,27 @@
+title: Tool-Definition Poisoning or Rug Pull
+id: cerb-0003
+status: stable
+description: Sentinel flagged a server whose tool description carried hidden instructions (poisoned) or whose manifest changed after approval (rug pull). Tool-definition poisoning.
+author: Cerberus
+date: 2026/06/18
+references:
+  - https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks
+tags:
+  - attack.persistence
+  - attack.t1195
+  - owasp.asi06
+logsource:
+  product: cerberus
+  service: gateway
+detection:
+  selection:
+    kind: sentinel
+    code:
+      - POISONED_DESC
+      - RUG_PULL
+      - SHADOWING
+      - TYPOSQUAT
+  condition: selection
+falsepositives:
+  - A benign description that happens to match an injection pattern; review the detail.
+level: high

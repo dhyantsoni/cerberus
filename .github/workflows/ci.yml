@@ -23,4 +23,4 @@ jobs:
       - name: Lint
         run: ruff check .
       - name: Test
-        run: pytest -q --cov=cerberus --cov-report=term-missing
+        run: python -m pytest -q --cov=cerberus --cov-report=term-missing

@@ -1,0 +1,26 @@
+title: Lethal Trifecta Formation
+id: cerb-0001
+status: stable
+description: A single agent tool call combined private-data access, untrusted influence, and external egress — the lethal trifecta. Cerberus blocked it; this is the audit detection.
+author: Cerberus
+date: 2026/06/18
+references:
+  - https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/
+  - https://arxiv.org/abs/2503.18813
+tags:
+  - attack.exfiltration
+  - attack.t1041
+  - owasp.asi02
+logsource:
+  product: cerberus
+  service: gateway
+detection:
+  selection:
+    kind: trifecta
+    L1: true
+    L2: true
+    L3: true
+  condition: selection
+falsepositives:
+  - A user-approved declassified flow (CONFIRM-approved); review the receipt.
+level: high

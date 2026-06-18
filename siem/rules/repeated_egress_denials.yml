@@ -1,0 +1,22 @@
+title: Repeated Blocked Egress Attempts (Probing)
+id: cerb-0005
+status: experimental
+description: Three or more egress calls were blocked in one session — a hijacked agent repeatedly probing for an exfil path it cannot reach. A behavioral abuse signal.
+author: Cerberus
+date: 2026/06/18
+references:
+  - https://genai.owasp.org/resource/agentic-ai-threats-and-mitigations/
+tags:
+  - attack.exfiltration
+  - owasp.asi02
+logsource:
+  product: cerberus
+  service: gateway
+detection:
+  selection:
+    kind: verdict
+    decision: BLOCK
+  condition: selection | count() >= 3
+falsepositives:
+  - A noisy demo loop; tune the threshold per environment.
+level: medium

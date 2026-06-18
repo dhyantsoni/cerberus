@@ -1,0 +1,22 @@
+title: Secret Bits Detected in Outbound Payload
+id: cerb-0004
+status: experimental
+description: The leak meter estimated a meaningful number of bits of a known secret in an outbound payload (verbatim or lightly transformed), even where labels looked clean.
+author: Cerberus
+date: 2026/06/18
+references:
+  - https://arxiv.org/abs/2503.18813
+tags:
+  - attack.exfiltration
+  - owasp.asi02
+logsource:
+  product: cerberus
+  service: gateway
+detection:
+  selection:
+    kind: trifecta
+    leak_bits|gte: 1
+  condition: selection
+falsepositives:
+  - Short coincidental n-gram overlap; treat as a meter, not a boundary.
+level: medium
