@@ -1,0 +1,17 @@
+# Core (the gateway + capability engine run on these)
+pyyaml>=6.0
+rapidfuzz>=3.0        # typosquat detection (Sentinel); falls back to difflib if absent
+
+# Host LLM (optional — the demo runs scripted without any of these)
+anthropic>=0.40       # default host LLM (Haiku/Sonnet); set ANTHROPIC_API_KEY
+# ollama             # local fallback (llama3.2 / qwen2.5:7b) — wifi-death insurance
+
+# MCP transport (for wiring as a real gateway in front of Claude Desktop / Cursor)
+mcp>=1.2             # official Model Context Protocol SDK
+
+# Dashboard (the live provenance DAG)
+fastapi>=0.110
+uvicorn>=0.29
+
+# Eval (stretch)
+# agentdojo          # AgentDojo benchmark harness

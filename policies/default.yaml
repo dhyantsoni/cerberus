@@ -1,0 +1,28 @@
+# Cerberus default policy.
+# Capability-ACL + graded response. Fail-closed: anything unspecified is denied.
+
+# What to do when the lethal trifecta assembles in a single call.
+# ALLOW | REDACT | CONFIRM | QUARANTINE | BLOCK
+trifecta_mode: BLOCK
+
+# What to do when an egress call violates a value's reader-ACL but is not a full trifecta.
+default_sink_mode: BLOCK
+
+# Servers/destinations treated as external sinks (egress -> the third trifecta leg).
+external_sinks:
+  - docsearch        # untrusted server hand-off
+  - status_page      # external POST
+  - "https://exfil.evil/collect"
+
+# Sensitivity defaults applied by servers when labelling their output.
+sensitivity_defaults:
+  "~/.aws/credentials": SECRET
+  "~/.ssh/id_rsa": SECRET
+  "runbook.md": PRIVATE
+
+# Declassification rules: explicit, audited downgrades to keep false positives down.
+# (e.g. the user pre-approved publishing the runbook summary to the status page.)
+declassify:
+  - value: runbook_summary
+    to_sensitivity: PUBLIC
+    add_readers: [status_page]
