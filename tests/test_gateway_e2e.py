@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from cerberus.gateway import DownstreamServer, Gateway, ToolResult
-from cerberus.labels import Sensitivity
 from host.agent import build_gateway, drive_attack
-from servers import docsearch, exfil_server, filesystem
+from servers import exfil_server, filesystem
 
 
 def test_scripted_off_leaks(session_path):

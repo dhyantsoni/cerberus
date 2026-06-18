@@ -54,7 +54,8 @@ if FastAPI is not None:
 
 def replay(path: str = "session.jsonl"):
     """CLI replay: print each event with its relative timestamp (forensic view)."""
-    events = [json.loads(l) for l in Path(path).read_text(encoding="utf-8").splitlines() if l.strip()]
+    events = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines()
+              if line.strip()]
     t0 = events[0]["ts"] if events else 0
     for e in events:
         print(f"+{e['ts'] - t0:6.2f}s  {e['kind']:10s}  {json.dumps(e['data'])[:100]}")

@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from .events import EventBus
-from .labels import Capability, Sensitivity
+from .labels import Capability, Sensitivity, join_all
 from .sentinel import Finding, Sentinel, ServerManifest
 from .session_state import LabelLedger
 from .tracer import Tracer
@@ -134,10 +134,49 @@ class Gateway:
             return {"ok": False, "blocked": True, "mode": decision.mode.value,
                     "reason": decision.reason, "blast_radius": decision.blast_radius}
 
-        # ALLOW / REDACT / CONFIRM-approved -> execute downstream
+        # REDACT: strip the offending values, then let the rest proceed. The
+        # gateway can only scrub values it knows verbatim. If a known secret
+        # survives redaction, or a protected value is heading to egress and we
+        # had nothing to scrub it with, fail-closed rather than leak.
+        if decision.mode == Mode.REDACT:
+            args, removed = self._redact_args(args)
+            residual = " ".join(str(v) for k, v in args.items()
+                                if not str(k).startswith("_"))
+            merged = join_all(arg_caps)
+            leftover_secret = any(s and s in residual for s in self.tracer.known_secrets)
+            unredactable_egress = server.is_egress and merged.is_protected and removed == 0
+            if leftover_secret or unredactable_egress:
+                return {"ok": False, "blocked": True, "mode": Mode.BLOCK.value,
+                        "reason": "REDACT could not remove a protected value; failing closed",
+                        "blast_radius": decision.blast_radius}
+
+        # ALLOW / REDACT(scrubbed) / CONFIRM-approved -> execute downstream
         res = server.call(tool, args)
         self._label_result(server, res)
-        return {"ok": True, "value": res.value, "mode": decision.mode.value}
+        out = {"ok": True, "value": res.value, "mode": decision.mode.value}
+        if decision.mode == Mode.REDACT:
+            out["redacted"] = removed
+        return out
+
+    # ---- redaction ----------------------------------------------------------
+
+    def _redact_args(self, args: dict) -> tuple[dict, int]:
+        """Replace every known secret + honeytoken canary occurring in a string
+        argument with ``[REDACTED]``. Returns ``(new_args, n_substitutions)``."""
+        marks = [s for s in (list(self.tracer.known_secrets)
+                             + list(self.tracer.vault._tokens.values())) if s]
+        if not marks:
+            return args, 0
+        removed = 0
+        out: dict = {}
+        for k, v in args.items():
+            if isinstance(v, str) and not str(k).startswith("_"):
+                for mark in marks:
+                    if mark in v:
+                        removed += v.count(mark)
+                        v = v.replace(mark, "[REDACTED]")
+            out[k] = v
+        return out, removed
 
     # ---- automatic labeling -------------------------------------------------
 
