@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cerberus-gateway"
+version = "0.1.0"
+description = "Runtime reference monitor that makes prompt-injection data exfiltration (the lethal trifecta) structurally impossible via capability-label dataflow tracking + a signed audit trail."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+# Core: the gateway + capability engine run on just these.
+dependencies = [
+    "pyyaml>=6.0",
+    "rapidfuzz>=3.0",   # Sentinel typosquat detection; falls back to difflib if absent
+]
+
+[project.optional-dependencies]
+host = ["anthropic>=0.40"]            # live LLM host loop (WS-B); demo runs scripted without it
+mcp = ["mcp>=1.2"]                    # real MCP transport (WS-A)
+dashboard = ["fastapi>=0.110", "uvicorn>=0.29"]
+eval = ["agentdojo"]                  # AgentDojo harness (WS-C); not in `all` to keep installs offline
+test = ["pytest>=8", "pytest-cov", "ruff"]
+all = ["cerberus-gateway[host,mcp,dashboard,test]"]
+
+[project.scripts]
+cerberus-demo = "host.agent:main"
+cerberus-verify = "cerberus.cli:main"
+
+[tool.setuptools]
+packages = ["cerberus", "host", "servers"]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.coverage.run]
+source = ["cerberus"]
