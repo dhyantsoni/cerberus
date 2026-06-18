@@ -2,69 +2,110 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Cerberus — live provenance DAG</title>
-  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
-  <style>
-    body { margin: 0; background: #0b0f1a; color: #e6e6e6; font: 14px ui-monospace, monospace; }
-    #cy { width: 100vw; height: 70vh; }
-    #panel { display: flex; gap: 16px; padding: 12px 16px; }
-    .leg { padding: 8px 14px; border: 1px solid #333; border-radius: 8px; opacity: .35; }
-    .leg.on { opacity: 1; border-color: #e0533d; box-shadow: 0 0 12px #e0533d66; }
-    #verdict { margin-left: auto; font-weight: bold; }
-    .block { color: #e0533d; }
-    .allow { color: #4ad295; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cerberus — live reference monitor</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <!-- Cytoscape: vendored-local first, CDN fallback (offline-safe) -->
+  <script src="/static/vendor/cytoscape.min.js"
+          onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js';document.head.appendChild(s);"></script>
 </head>
 <body>
-  <div id="cy"></div>
-  <div id="panel">
-    <div class="leg" id="L1">L1 · private data</div>
-    <div class="leg" id="L2">L2 · untrusted influence</div>
-    <div class="leg" id="L3">L3 · external egress</div>
-    <div id="verdict">awaiting events…</div>
+  <header>
+    <div class="logo">CERB<b>E</b>RUS</div>
+    <div class="tag">runtime reference monitor · lethal-trifecta firewall for AI agents</div>
+    <div class="spacer"></div>
+    <label class="switch">
+      <span class="lbl" id="onoff">CERBERUS ON</span>
+      <input type="checkbox" id="toggle" checked />
+      <span class="track"></span>
+    </label>
+  </header>
+
+  <div class="grid">
+    <div id="cy"></div>
+
+    <div class="side">
+      <div class="card">
+        <h3>Lethal trifecta</h3>
+        <div class="legs">
+          <div class="leg" id="L1"><span class="dot"></span> L1 · private data <small>&nbsp;(SECRET/PRIVATE read)</small></div>
+          <div class="leg" id="L2"><span class="dot"></span> L2 · untrusted influence <small>&nbsp;(poisoned content)</small></div>
+          <div class="leg" id="L3"><span class="dot"></span> L3 · external egress <small>&nbsp;(outbound sink)</small></div>
+        </div>
+        <div class="verdict" id="verdict">
+          <div class="big" id="verdict-big">—</div>
+          <div class="reason" id="verdict-reason">awaiting run…</div>
+          <span class="mode-chip" id="mode-chip">policy: BLOCK</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Exfil sink &amp; leak meter</h3>
+        <div class="sink empty" id="sink">exfil sink: empty ✅</div>
+        <div class="gauge-wrap" style="margin-top:12px;">
+          <div class="gauge" id="gauge"><span class="val" id="gauge-val">0</span></div>
+          <div class="meta" id="leak-meta">no secret bits detected</div>
+        </div>
+        <div class="honey" id="honey"></div>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <div class="card">
+        <h3>Drive the demo</h3>
+        <div class="controls">
+          <label>mode
+            <select id="mode">
+              <option value="BLOCK" selected>BLOCK</option>
+              <option value="CONFIRM">CONFIRM</option>
+            </select>
+          </label>
+          <button class="primary" id="run">▶ Run scenario</button>
+          <button id="reset">Reset</button>
+        </div>
+        <p class="reason" style="margin:10px 0 0;color:var(--muted)">
+          Task: “summarize the runbook and post it to the status page.” A poisoned doc
+          tries to smuggle AWS creds to <code>exfil.evil</code>. Toggle Cerberus OFF to watch it leak.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>Signed receipt chain</h3>
+        <div class="receipts" id="receipts"></div>
+        <div class="verify-badge" id="verify-badge"></div>
+        <div class="controls" style="margin-top:10px;">
+          <button class="danger" id="tamper">Tamper a receipt</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Forensic replay</h3>
+        <div class="controls"><button id="loadsession">Load session</button></div>
+        <div class="replay" style="margin-top:10px;">
+          <span class="reason">⟲</span>
+          <input type="range" id="scrub" min="0" max="0" value="0" />
+        </div>
+        <p class="reason" style="margin:10px 0 0;color:var(--muted)">
+          Rewind the whole attack from the signed log — the backup if the live run hiccups.
+        </p>
+      </div>
+    </div>
   </div>
 
-  <script>
-    // Minimal SSE client + Cytoscape DAG. Wire this to /events from dashboard/app.py.
-    const cy = cytoscape({
-      container: document.getElementById('cy'),
-      style: [
-        { selector: 'node', style: { 'label': 'data(label)', 'color': '#fff',
-          'background-color': '#2b6cb0', 'text-valign': 'center', 'font-size': 10 } },
-        { selector: 'node.untrusted', style: { 'background-color': '#b7791f' } },
-        { selector: 'node.secret', style: { 'background-color': '#9b2c2c' } },
-        { selector: 'edge', style: { 'width': 2, 'line-color': '#555',
-          'target-arrow-shape': 'triangle', 'target-arrow-color': '#555',
-          'curve-style': 'bezier' } },
-        { selector: 'edge.blocked', style: { 'line-color': '#e0533d', 'width': 4,
-          'target-arrow-color': '#e0533d' } },
-      ],
-      layout: { name: 'breadthfirst', directed: true },
-    });
+  <div id="toasts"></div>
 
-    function setLeg(id, on) { document.getElementById(id).classList.toggle('on', on); }
+  <div class="modal-bg hidden" id="modal">
+    <div class="phone">
+      <div class="head">Cerberus · approval required</div>
+      <div class="title">⚠ Outbound data review</div>
+      <div class="body" id="confirm-body"></div>
+      <div class="row">
+        <button class="danger" id="deny">Deny</button>
+        <button class="primary" id="approve">Approve</button>
+      </div>
+    </div>
+  </div>
 
-    const es = new EventSource('/events');
-    es.onmessage = (m) => {
-      const e = JSON.parse(m.data);
-      if (e.kind === 'value') {
-        cy.add({ data: { id: e.data.ref, label: e.data.value_kind } });
-        if (e.data.value_kind === 'untrusted') cy.$('#' + e.data.ref).addClass('untrusted');
-        if (e.data.sensitivity >= 2) cy.$('#' + e.data.ref).addClass('secret');
-        cy.layout({ name: 'breadthfirst', directed: true }).run();
-      }
-      if (e.kind === 'trifecta') {
-        setLeg('L1', e.data.L1_private_access);
-        setLeg('L2', e.data.L2_untrusted_influence);
-        setLeg('L3', e.data.L3_egress);
-      }
-      if (e.kind === 'verdict') {
-        const v = document.getElementById('verdict');
-        v.textContent = e.data.decision + ' — ' + e.data.reason;
-        v.className = e.data.decision === 'BLOCK' ? 'block' : 'allow';
-        if (e.data.decision === 'BLOCK') cy.edges().last().addClass('blocked');
-      }
-    };
-  </script>
+  <script src="/static/app.js"></script>
 </body>
 </html>
