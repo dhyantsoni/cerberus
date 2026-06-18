@@ -2,8 +2,12 @@
 transport (no subprocess), exactly as a real client (Claude Desktop) would drive it."""
 from __future__ import annotations
 
-import anyio
-from mcp.shared.memory import create_connected_server_and_client_session as connect
+import pytest
+
+pytest.importorskip("mcp")
+
+import anyio  # noqa: E402
+from mcp.shared.memory import create_connected_server_and_client_session as connect  # noqa: E402
 
 from cerberus.mcp_server import build_server
 from host.agent import build_gateway

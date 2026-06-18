@@ -3,9 +3,13 @@ ClientSession as the sync session Gateway.register_remote needs. Verified over t
 in-memory transport against a trivial downstream server."""
 from __future__ import annotations
 
-import mcp.types as types
-from mcp.server.lowlevel import Server
-from mcp.shared.memory import create_connected_server_and_client_session as connect
+import pytest
+
+pytest.importorskip("mcp")
+
+import mcp.types as types  # noqa: E402
+from mcp.server.lowlevel import Server  # noqa: E402
+from mcp.shared.memory import create_connected_server_and_client_session as connect  # noqa: E402
 
 from cerberus.gateway import Gateway
 from cerberus.mcp_client import RemoteMCPServer
