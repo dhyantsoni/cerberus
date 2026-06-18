@@ -13,12 +13,15 @@ from fastapi.testclient import TestClient  # noqa: E402
 from dashboard.app import app  # noqa: E402
 
 
-def _wait_verdict(c, timeout=8.0):
+def _wait_verdict(c, count=3, timeout=8.0):
+    """Wait until the async run has issued all ``count`` receipts, then return the
+    last (the egress decision). Returning on the first verdict races the worker
+    thread and yields an early ALLOW before the terminal BLOCK is written."""
     end = time.time() + timeout
     while time.time() < end:
         evts = c.get("/api/session").json()["events"]
         verdicts = [e for e in evts if e["kind"] == "verdict"]
-        if verdicts:
+        if len(verdicts) >= count:
             return verdicts[-1]
         time.sleep(0.05)
     return None
