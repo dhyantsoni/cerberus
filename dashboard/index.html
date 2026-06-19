@@ -3,105 +3,117 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cerberus — live reference monitor</title>
+  <title>Cerberus — runtime reference monitor</title>
   <link rel="stylesheet" href="/static/styles.css" />
-  <!-- Cytoscape: vendored-local first, CDN fallback (offline-safe) -->
   <script src="/static/vendor/cytoscape.min.js"
           onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/cytoscape@3.30.2/dist/cytoscape.min.js';document.head.appendChild(s);"></script>
 </head>
 <body>
-  <header>
-    <div class="logo">CERB<b>E</b>RUS</div>
-    <div class="tag">runtime reference monitor · lethal-trifecta firewall for AI agents</div>
-    <div class="spacer"></div>
-    <label class="switch">
-      <span class="lbl" id="onoff">CERBERUS ON</span>
-      <input type="checkbox" id="toggle" checked />
-      <span class="track"></span>
-    </label>
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark" aria-hidden="true">
+        <span class="head"></span><span class="head"></span><span class="head"></span>
+      </div>
+      <div class="brand-text">
+        <h1>Cerberus</h1>
+        <p>runtime reference monitor — it makes prompt-injection exfiltration structurally impossible</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="status-pill" id="status-pill"><span class="ping"></span> awaiting run</div>
+      <label class="switch" title="Toggle Cerberus on/off">
+        <span class="switch-label" id="onoff">CERBERUS&nbsp;ON</span>
+        <input type="checkbox" id="toggle" checked />
+        <span class="track"><span class="thumb"></span></span>
+      </label>
+    </div>
   </header>
 
-  <div class="grid">
-    <div id="cy"></div>
+  <main class="stage">
+    <section class="panel graph">
+      <div class="panel-head">
+        <span class="eyebrow">data-flow graph</span>
+        <div class="legend">
+          <span><i class="sw user"></i>user</span>
+          <span><i class="sw trusted"></i>trusted</span>
+          <span><i class="sw untrusted"></i>untrusted</span>
+          <span><i class="sw secret"></i>secret</span>
+          <span><i class="sw egress"></i>egress</span>
+        </div>
+      </div>
+      <div id="cy"></div>
+    </section>
 
-    <div class="side">
-      <div class="card">
-        <h3>Lethal trifecta</h3>
+    <aside class="rail">
+      <section class="panel verdict-panel">
+        <div class="panel-head"><span class="eyebrow">lethal trifecta</span></div>
         <div class="legs">
-          <div class="leg" id="L1"><span class="dot"></span> L1 · private data <small>&nbsp;(SECRET/PRIVATE read)</small></div>
-          <div class="leg" id="L2"><span class="dot"></span> L2 · untrusted influence <small>&nbsp;(poisoned content)</small></div>
-          <div class="leg" id="L3"><span class="dot"></span> L3 · external egress <small>&nbsp;(outbound sink)</small></div>
+          <div class="leg" id="L1"><span class="dot"></span><span class="leg-name">L1 · private data</span><span class="leg-sub">SECRET / PRIVATE read</span></div>
+          <div class="leg" id="L2"><span class="dot"></span><span class="leg-name">L2 · untrusted influence</span><span class="leg-sub">poisoned content</span></div>
+          <div class="leg" id="L3"><span class="dot"></span><span class="leg-name">L3 · external egress</span><span class="leg-sub">outbound sink</span></div>
         </div>
         <div class="verdict" id="verdict">
-          <div class="big" id="verdict-big">—</div>
+          <div class="verdict-top"><span class="big" id="verdict-big">—</span><span class="mode-chip" id="mode-chip">policy: BLOCK</span></div>
           <div class="reason" id="verdict-reason">awaiting run…</div>
-          <span class="mode-chip" id="mode-chip">policy: BLOCK</span>
         </div>
-      </div>
+      </section>
 
-      <div class="card">
-        <h3>Exfil sink &amp; leak meter</h3>
-        <div class="sink empty" id="sink">exfil sink: empty ✅</div>
-        <div class="gauge-wrap" style="margin-top:12px;">
-          <div class="gauge" id="gauge"><span class="val" id="gauge-val">0</span></div>
-          <div class="meta" id="leak-meta">no secret bits detected</div>
+      <section class="panel">
+        <div class="panel-head"><span class="eyebrow">exfiltration sink</span></div>
+        <div class="sink empty" id="sink">sink idle — nothing received</div>
+        <div class="meter">
+          <div class="gauge" id="gauge"><span class="gauge-val" id="gauge-val">0</span><span class="gauge-unit">bits</span></div>
+          <div class="meter-text">
+            <div class="meter-title">leak meter</div>
+            <div class="muted" id="leak-meta">no secret bits detected</div>
+            <div class="honey" id="honey"></div>
+          </div>
         </div>
-        <div class="honey" id="honey"></div>
+      </section>
+    </aside>
+  </main>
+
+  <section class="dock">
+    <div class="panel">
+      <div class="panel-head"><span class="eyebrow">drive the demo</span></div>
+      <div class="controls">
+        <label class="field">policy
+          <select id="mode">
+            <option value="BLOCK" selected>BLOCK</option>
+            <option value="CONFIRM">CONFIRM</option>
+          </select>
+        </label>
+        <button class="btn primary" id="run"><span class="play">▶</span> Run scenario</button>
+        <button class="btn" id="reset">Reset</button>
       </div>
+      <p class="hint">Task: <em>“summarize the runbook and post it to the status page.”</em> A poisoned doc tries to smuggle AWS keys to <code>exfil.evil</code>. Flip Cerberus <b>off</b> to watch it leak.</p>
     </div>
 
-    <div class="bottom">
-      <div class="card">
-        <h3>Drive the demo</h3>
-        <div class="controls">
-          <label>mode
-            <select id="mode">
-              <option value="BLOCK" selected>BLOCK</option>
-              <option value="CONFIRM">CONFIRM</option>
-            </select>
-          </label>
-          <button class="primary" id="run">▶ Run scenario</button>
-          <button id="reset">Reset</button>
-        </div>
-        <p class="reason" style="margin:10px 0 0;color:var(--muted)">
-          Task: “summarize the runbook and post it to the status page.” A poisoned doc
-          tries to smuggle AWS creds to <code>exfil.evil</code>. Toggle Cerberus OFF to watch it leak.
-        </p>
-      </div>
-
-      <div class="card">
-        <h3>Signed receipt chain</h3>
-        <div class="receipts" id="receipts"></div>
-        <div class="verify-badge" id="verify-badge"></div>
-        <div class="controls" style="margin-top:10px;">
-          <button class="danger" id="tamper">Tamper a receipt</button>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>Forensic replay</h3>
-        <div class="controls"><button id="loadsession">Load session</button></div>
-        <div class="replay" style="margin-top:10px;">
-          <span class="reason">⟲</span>
-          <input type="range" id="scrub" min="0" max="0" value="0" />
-        </div>
-        <p class="reason" style="margin:10px 0 0;color:var(--muted)">
-          Rewind the whole attack from the signed log — the backup if the live run hiccups.
-        </p>
-      </div>
+    <div class="panel">
+      <div class="panel-head"><span class="eyebrow">signed receipt chain</span><span class="verify-badge" id="verify-badge"></span></div>
+      <div class="receipts" id="receipts"></div>
+      <button class="btn ghost danger" id="tamper">Tamper a receipt →</button>
     </div>
-  </div>
+
+    <div class="panel">
+      <div class="panel-head"><span class="eyebrow">forensic replay</span><button class="btn ghost" id="loadsession">Load session</button></div>
+      <div class="replay">
+        <span class="rewind">⟲</span>
+        <input type="range" id="scrub" min="0" max="0" value="0" />
+      </div>
+      <p class="hint">Rewind the whole attack from the signed log — your safety net if the live run hiccups.</p>
+    </div>
+  </section>
 
   <div id="toasts"></div>
 
   <div class="modal-bg hidden" id="modal">
-    <div class="phone">
-      <div class="head">Cerberus · approval required</div>
-      <div class="title">⚠ Outbound data review</div>
-      <div class="body" id="confirm-body"></div>
-      <div class="row">
-        <button class="danger" id="deny">Deny</button>
-        <button class="primary" id="approve">Approve</button>
+    <div class="sheet">
+      <div class="sheet-head"><span class="sheet-icon">!</span><div><div class="sheet-app">Cerberus</div><div class="sheet-title">Approval required</div></div></div>
+      <div class="sheet-body" id="confirm-body"></div>
+      <div class="sheet-actions">
+        <button class="btn ghost" id="deny">Deny</button>
+        <button class="btn primary" id="approve">Approve</button>
       </div>
     </div>
   </div>

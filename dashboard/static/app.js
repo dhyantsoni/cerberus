@@ -11,22 +11,23 @@ const cy = cytoscape({
   container: document.getElementById("cy"),
   style: [
     { selector: "node", style: {
-      "label": "data(label)", "color": "#dfe8f7", "font-size": 9, "text-wrap": "wrap",
-      "text-max-width": 90, "text-valign": "center", "text-halign": "center",
-      "background-color": "#1d2740", "border-width": 2, "border-color": "#33405e",
-      "width": 92, "height": 46, "shape": "round-rectangle", "padding": 6 } },
-    { selector: "node.user", style: { "background-color": "#16335c", "border-color": "#2b6cb0" } },
-    { selector: "node.trusted", style: { "border-color": "#4ad295" } },
-    { selector: "node.private", style: { "background-color": "#2a2f12", "border-color": "#b6a52f" } },
-    { selector: "node.untrusted", style: { "background-color": "#3a2c10", "border-color": "#d99a1f" } },
-    { selector: "node.secret", style: { "background-color": "#3a1714", "border-color": "#e0533d" } },
-    { selector: "node.egress", style: { "shape": "hexagon", "width": 100, "height": 56 } },
-    { selector: "node.blocked", style: { "border-color": "#e0533d", "border-width": 4,
-      "background-color": "#4a1410", "shadow-blur": 24, "shadow-color": "#e0533d", "shadow-opacity": 0.9 } },
-    { selector: "edge", style: { "width": 2, "line-color": "#3a4a6a",
-      "target-arrow-shape": "triangle", "target-arrow-color": "#3a4a6a", "curve-style": "bezier" } },
-    { selector: "edge.blocked", style: { "line-color": "#e0533d", "width": 5, "line-style": "solid",
-      "target-arrow-color": "#e0533d", "source-arrow-shape": "tee", "source-arrow-color": "#e0533d" } },
+      "label": "data(label)", "color": "#e9eef6",
+      "font-family": "Space Grotesk, system-ui, sans-serif", "font-size": 10, "font-weight": 500,
+      "text-wrap": "wrap", "text-max-width": 102, "text-valign": "center", "text-halign": "center",
+      "background-color": "#141a25", "background-opacity": 0.96, "border-width": 1.5, "border-color": "#2b3543",
+      "width": 110, "height": 50, "shape": "round-rectangle", "padding": 8 } },
+    { selector: "node.user", style: { "background-color": "#14223f", "border-color": "#4f86f7" } },
+    { selector: "node.trusted", style: { "border-color": "#2fd486" } },
+    { selector: "node.private", style: { "background-color": "#26210e", "border-color": "#f0a83a" } },
+    { selector: "node.untrusted", style: { "background-color": "#2a1d0c", "border-color": "#f0a83a" } },
+    { selector: "node.secret", style: { "background-color": "#2c1411", "border-color": "#ff5d54" } },
+    { selector: "node.egress", style: { "shape": "hexagon", "width": 118, "height": 60, "border-color": "#ff7a45" } },
+    { selector: "node.blocked", style: { "border-color": "#ff5d54", "border-width": 3, "color": "#ffd9d5",
+      "background-color": "#3a1411", "shadow-blur": 30, "shadow-color": "#ff5d54", "shadow-opacity": 0.85 } },
+    { selector: "edge", style: { "width": 1.6, "line-color": "#2b3543",
+      "target-arrow-shape": "triangle", "target-arrow-color": "#2b3543", "curve-style": "bezier", "arrow-scale": 0.9 } },
+    { selector: "edge.blocked", style: { "line-color": "#ff5d54", "width": 4,
+      "target-arrow-color": "#ff5d54", "source-arrow-shape": "tee", "source-arrow-color": "#ff5d54" } },
   ],
   layout: { name: "breadthfirst", directed: true, spacingFactor: 1.1 },
 });
@@ -80,11 +81,18 @@ function setSink(received) {
   const el = document.getElementById("sink");
   if (received && received.length) {
     el.className = "sink hit";
-    el.innerHTML = "EXFIL SINK RECEIVED:<br><code>" + escapeHtml(received[0].slice(0, 120)) + "</code>";
+    el.innerHTML = "⚠ EXFIL SINK RECEIVED<code>" + escapeHtml(received[0].slice(0, 120)) + "</code>";
   } else {
     el.className = "sink empty";
-    el.textContent = "exfil sink: empty ✅";
+    el.textContent = "sink secure · nothing received ✓";
   }
+}
+
+function setStatus(text, cls) {
+  const p = document.getElementById("status-pill");
+  if (!p) return;
+  p.className = "status-pill" + (cls ? " " + cls : "");
+  p.innerHTML = '<span class="ping"></span> ' + text;
 }
 
 function addReceipt(d) {
@@ -152,14 +160,17 @@ function handleEvent(e) {
     case "verdict":
       setVerdict(d.decision, d.reason, null);
       if (d.head_verdicts) setLegsFrom(d.head_verdicts);
-      if (d.decision === "BLOCK" || d.decision === "QUARANTINE") markBlocked();
+      if (d.decision === "BLOCK" || d.decision === "QUARANTINE") { markBlocked(); setStatus("threat blocked", "threat"); }
       addReceipt(d);
       refreshSinkAndVerify();
       break;
-    case "sink_state":
+    case "sink_state": {
+      const leaked = (d.received || []).length;
       setSink(d.received || []);
+      setStatus(leaked ? "breach · key exfiltrated" : "secure · sink empty", leaked ? "breach" : "live");
       refreshVerify();
       break;
+    }
     case "confirm_request":
       showConfirm(d);
       break;
@@ -193,6 +204,7 @@ function fullReset() {
   setLeak(0); setHoney(""); setSink([]);
   document.getElementById("receipts").innerHTML = "";
   document.getElementById("verify-badge").textContent = "";
+  setStatus("awaiting run", "");
 }
 
 async function runScenario() {
@@ -204,6 +216,7 @@ async function runScenario() {
     body: JSON.stringify({ enabled, mode }) }).then(x => x.json());
   currentRunId = r.run_id;
   document.getElementById("mode-chip").textContent = enabled ? "policy: " + mode : "CERBERUS OFF";
+  setStatus(enabled ? "live · monitoring" : "unprotected · cerberus off", enabled ? "live" : "threat");
   // The backend emits a deterministic `sink_state` event when the run completes,
   // which refreshes the sink card (covers OFF mode, which emits no verdict event).
 }
