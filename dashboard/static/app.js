@@ -156,6 +156,10 @@ function handleEvent(e) {
       addReceipt(d);
       refreshSinkAndVerify();
       break;
+    case "sink_state":
+      setSink(d.received || []);
+      refreshVerify();
+      break;
     case "confirm_request":
       showConfirm(d);
       break;
@@ -200,6 +204,8 @@ async function runScenario() {
     body: JSON.stringify({ enabled, mode }) }).then(x => x.json());
   currentRunId = r.run_id;
   document.getElementById("mode-chip").textContent = enabled ? "policy: " + mode : "CERBERUS OFF";
+  // The backend emits a deterministic `sink_state` event when the run completes,
+  // which refreshes the sink card (covers OFF mode, which emits no verdict event).
 }
 
 async function tamper() {

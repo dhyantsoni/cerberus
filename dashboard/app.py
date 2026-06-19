@@ -71,6 +71,10 @@ def _run_scenario(enabled: bool, mode: str | None, run_id: str) -> None:
     try:
         drive_attack(gw)
     finally:
+        # Deterministic final-state event: fires after the run completes (and after
+        # the start-of-run reset), so the UI shows the OFF leak / ON empty correctly
+        # even when there is no verdict event (OFF mode emits none).
+        gw.bus.emit("sink_state", received=list(exfil_server.received))
         _confirm_gates.pop(run_id, None)
 
 
